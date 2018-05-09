@@ -1,26 +1,34 @@
 from flask import Flask, request
-import telepot
-import urllib3
+import requests
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-proxy_url = "http://proxy.server:3128"
-telepot.api._pools = {
-    'default': urllib3.ProxyManager(proxy_url=proxy_url, num_pools=3, maxsize=10, retries=False, timeout=30),
-}
-telepot.api._onetime_pool_spec = (urllib3.ProxyManager, dict(proxy_url=proxy_url, num_pools=1, maxsize=1, retries=False, timeout=30))
 
-secret = "A_SECRET_NUMBER"
-bot = telepot.Bot('562472676:AAEihmUIpmnorjTmsbvci3-dQwXTqRlHmNY')
-
-# bot.setWebhook("https://ngrok.io/{}".format(secret), max_connections=1)
-bot.setWebhook("https://ngrok.io/{}".format(secret), max_connections=1)
+TOKEN = '<token>'
 
 app = Flask(__name__)
 
-@app.route('/{}'.format(secret), methods=["POST"])
-def telegram_webhook():
-    update = request.get_json()
-    if "message" in update:
-        text = update["message"]["text"]
-        chat_id = update["message"]["chat"]["id"]
-        bot.sendMessage(chat_id, "From the web: you said '{}'".format(text))
-    return "OK"
+
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+
+def get_url(method):
+    return "https://api.telegram.org/bot{}/{}".format(TOKEN, method)
+
+
+def respond_to_update(update):
+    data = {}
+    data["chat_id"] = update["message"]["chat"]["id"]
+    data["text"] = "I can hear you!"
+    r = requests.post(get_url("sendMessage"), data=data)
+    print(r)
+
+
+@app.route("/{}".format(TOKEN), methods=["POST"])
+def process_update():
+    if request.method == "POST":
+        update = request.get_json()
+        if "message" in update:
+            respond_to_update(update)
+        return "ok!", 200
